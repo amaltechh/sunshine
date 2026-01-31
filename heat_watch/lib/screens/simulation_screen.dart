@@ -8,6 +8,7 @@ import '../models/simulation_result.dart';
 import '../models/heat_inequality_index.dart'; // Added import
 import '../theme/app_colors.dart';
 import '../constants/app_constants.dart';
+import 'package:geolocator/geolocator.dart'; // Added for user location
 
 class SimulationScreen extends StatefulWidget {
   const SimulationScreen({super.key});
@@ -20,10 +21,189 @@ class _SimulationScreenState extends State<SimulationScreen> {
   GoogleMapController? _mapController;
   LatLng? _selectedLocation;
   InterventionType _selectedIntervention = InterventionType.treePlanting;
+  MapType _currentMapType = MapType.normal; // Added for map type control
+
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // Unified method to handle location selection (from Map Tap or Search)
+  void _handleLocationSelection(LatLng position) {
+    setState(() {
+      _selectedLocation = position;
+    });
+
+    // 1. Find Closest HII Data for analysis context
+    final heatProvider = context.read<HeatProvider>();
+    final hii =
+        heatProvider.getClosestHII(position.latitude, position.longitude);
+
+    if (hii != null) {
+      // 2. Auto-Select Intervention Type based on Analysis
+      InterventionType recommendedType;
+
+      if (hii.populationDensity > 20000) {
+        recommendedType =
+            InterventionType.coolRoof; // High Density -> Vertical Solution
+      } else if (hii.greenCover < 15) {
+        recommendedType = InterventionType
+            .treePlanting; // Low Green -> Trees (Urban Forestry)
+      } else {
+        recommendedType = InterventionType.greenSpace; // Moderate -> Parks
+      }
+
+      setState(() {
+        _selectedIntervention = recommendedType;
+      });
+
+      // Optional: Animate Camera
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLng(position),
+      );
+
+      // Optional: Show snackbar feedback
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Location Selected. Recommended: ${_getInterventionLabel(recommendedType)}'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: AppColors.primary,
+        ),
+      );
+    }
+  }
+
+  String _getInterventionLabel(InterventionType type) {
+    switch (type) {
+      case InterventionType.treePlanting:
+        return 'Urban Forestry';
+      case InterventionType.coolRoof:
+        return 'Cool Roofs';
+      case InterventionType.greenSpace:
+        return 'Green Spaces';
+    }
+  }
+
+  void _performSearch(String query) {
+    if (query.isEmpty) return;
+
+    final heatProvider = context.read<HeatProvider>();
+    // Case-insensitive search
+    final match = heatProvider.heatData.firstWhere(
+      (data) => data.wardName.toLowerCase().contains(query.toLowerCase()),
+      orElse: () =>
+          heatProvider.heatData.first, // Fallback (safe but maybe show error?)
+    );
+
+    // If we actually found a match (or just defaulted to first, ideally handle 'not found')
+    if (match.wardName.toLowerCase().contains(query.toLowerCase())) {
+      _handleLocationSelection(LatLng(match.latitude, match.longitude));
+      FocusManager.instance.primaryFocus?.unfocus(); // Hide keyboard
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location not found in monitored wards.')),
+      );
+    }
+  }
+
+  Future<void> _goToUserLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location services are disabled.')),
+      );
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permissions are denied')),
+        );
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Location permissions are permanently denied, we cannot request permissions.')),
+      );
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLng(LatLng(position.latitude, position.longitude)),
+    );
+  }
+
+  Future<void> _simulateIntervention(
+    HeatProvider heatProvider,
+    SimulationProvider simProvider,
+  ) async {
+    if (_selectedLocation == null) return;
+
+    double currentTemp = 42.0;
+    double minDistance = double.infinity;
+
+    for (final heatData in heatProvider.heatData) {
+      final distance = _calculateDistance(
+        _selectedLocation!.latitude,
+        _selectedLocation!.longitude,
+        heatData.latitude,
+        heatData.longitude,
+      );
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        currentTemp = heatData.temperature;
+      }
+    }
+
+    await simProvider.addIntervention(
+      latitude: _selectedLocation!.latitude,
+      longitude: _selectedLocation!.longitude,
+      currentTemperature: currentTemp,
+      interventionType: _selectedIntervention,
+    );
+
+    setState(() => _selectedLocation = null);
+  }
+
+  double _calculateDistance(
+      double lat1, double lon1, double lat2, double lon2) {
+    return ((lat1 - lat2) * (lat1 - lat2) + (lon1 - lon2) * (lon1 - lon2));
+  }
+
+  String _formatNumber(int num) {
+    if (num >= 1000) return '${(num / 1000).toStringAsFixed(1)}k';
+    return num.toString();
+  }
+
+  String _formatCurrency(double amount) {
+    if (amount >= 10000000)
+      return '${(amount / 10000000).toStringAsFixed(1)}Cr';
+    if (amount >= 100000) return '${(amount / 100000).toStringAsFixed(1)}L';
+    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}k';
+    return amount.toStringAsFixed(0);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false, // Prevent map squishing
       appBar: AppBar(
         title: const Text('Intervention Simulator'),
         actions: [
@@ -32,6 +212,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
               context.read<SimulationProvider>().clearSimulations();
               setState(() {
                 _selectedLocation = null;
+                _searchController.clear();
               });
             },
             icon: const Icon(Icons.refresh),
@@ -42,6 +223,39 @@ class _SimulationScreenState extends State<SimulationScreen> {
       body: Consumer2<HeatProvider, SimulationProvider>(
         builder: (context, heatProvider, simProvider, child) {
           Set<Marker> markers = {};
+          Set<Circle> circles = {};
+
+          // --- HEAT MAP LAYERS ---
+          for (var data in heatProvider.heatData) {
+            final temp = heatProvider.showNightHeat
+                ? data.nightTemperature
+                : data.temperature;
+            final normalizedTemp = data.getNormalizedTemp(
+                AppConstants.minTemp, AppConstants.maxTemp);
+
+            circles.add(
+              Circle(
+                circleId: CircleId('${data.id}_circle'),
+                center: LatLng(data.latitude, data.longitude),
+                radius: 800,
+                strokeWidth: 0,
+                fillColor:
+                    AppColors.getHeatColor(normalizedTemp).withOpacity(0.5),
+              ),
+            );
+
+            markers.add(
+              Marker(
+                markerId: MarkerId(data.id),
+                position: LatLng(data.latitude, data.longitude),
+                icon: BitmapDescriptor.defaultMarkerWithHue(
+                    (1.0 - normalizedTemp) * 120.0),
+                infoWindow: InfoWindow(title: '${data.wardName}: ${temp}°C'),
+                onTap: () => _handleLocationSelection(LatLng(
+                    data.latitude, data.longitude)), // Tap marker to select
+              ),
+            );
+          }
 
           // Simulation Markers
           for (var sim in simProvider.simulations) {
@@ -64,6 +278,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 markerId: MarkerId(sim.id),
                 position: LatLng(sim.latitude, sim.longitude),
                 icon: BitmapDescriptor.defaultMarkerWithHue(hue),
+                zIndex: 5,
                 infoWindow: InfoWindow(
                   title: sim.interventionName,
                   snippet:
@@ -84,6 +299,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 position: _selectedLocation!,
                 icon: BitmapDescriptor.defaultMarkerWithHue(
                     BitmapDescriptor.hueRed),
+                zIndex: 10,
                 infoWindow: const InfoWindow(title: 'Selected Location'),
               ),
             );
@@ -107,12 +323,11 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       onMapCreated: (controller) {
                         _mapController = controller;
                       },
-                      onTap: (position) {
-                        setState(() {
-                          _selectedLocation = position;
-                        });
-                      },
+                      onTap: _handleLocationSelection, // Tap map to select
                       markers: markers,
+                      circles: circles,
+                      mapType: _currentMapType,
+                      myLocationEnabled: true,
                       myLocationButtonEnabled: false,
                       zoomControlsEnabled: false,
                       mapToolbarEnabled: false,
@@ -156,6 +371,76 @@ class _SimulationScreenState extends State<SimulationScreen> {
                           ),
                         ).animate().fadeIn(duration: 400.ms),
                       ),
+
+                    // SEARCH BAR OVERLAY
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      right: 70, // Leave space for controls
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.cardBackground,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.glassBorder),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            )
+                          ],
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          style: const TextStyle(color: AppColors.textPrimary),
+                          decoration: InputDecoration(
+                            hintText: 'Search location (e.g. Shahdara)...',
+                            hintStyle:
+                                const TextStyle(color: AppColors.textTertiary),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.search,
+                                  color: AppColors.primary),
+                              onPressed: () =>
+                                  _performSearch(_searchController.text),
+                            ),
+                          ),
+                          onSubmitted: _performSearch,
+                        ),
+                      ),
+                    ),
+
+                    // Map Controls
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: Column(
+                        children: [
+                          _NeoIconBtn(
+                            icon: _currentMapType == MapType.normal
+                                ? Icons.satellite_alt
+                                : Icons.map,
+                            onTap: () => setState(() => _currentMapType =
+                                _currentMapType == MapType.normal
+                                    ? MapType.satellite
+                                    : MapType.normal),
+                          ),
+                          const SizedBox(height: 12),
+                          _NeoIconBtn(
+                            icon: Icons.brightness_6,
+                            onTap: () => heatProvider.toggleNightHeat(),
+                            isActive: heatProvider.showNightHeat,
+                          ),
+                          const SizedBox(height: 12),
+                          _NeoIconBtn(
+                            icon: Icons.my_location,
+                            onTap: _goToUserLocation,
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -320,68 +605,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
-  IconData _getInterventionIcon(InterventionType type) {
-    switch (type) {
-      case InterventionType.treePlanting:
-        return Icons.park;
-      case InterventionType.coolRoof:
-        return Icons.roofing;
-      case InterventionType.greenSpace:
-        return Icons.grass;
-    }
-  }
-
-  Future<void> _simulateIntervention(
-    HeatProvider heatProvider,
-    SimulationProvider simProvider,
-  ) async {
-    if (_selectedLocation == null) return;
-
-    double currentTemp = 42.0;
-    double minDistance = double.infinity;
-
-    for (final heatData in heatProvider.heatData) {
-      final distance = _calculateDistance(
-        _selectedLocation!.latitude,
-        _selectedLocation!.longitude,
-        heatData.latitude,
-        heatData.longitude,
-      );
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        currentTemp = heatData.temperature;
-      }
-    }
-
-    await simProvider.addIntervention(
-      latitude: _selectedLocation!.latitude,
-      longitude: _selectedLocation!.longitude,
-      currentTemperature: currentTemp,
-      interventionType: _selectedIntervention,
-    );
-
-    setState(() => _selectedLocation = null);
-  }
-
-  double _calculateDistance(
-      double lat1, double lon1, double lat2, double lon2) {
-    return ((lat1 - lat2) * (lat1 - lat2) + (lon1 - lon2) * (lon1 - lon2));
-  }
-
-  String _formatNumber(int num) {
-    if (num >= 1000) return '${(num / 1000).toStringAsFixed(1)}k';
-    return num.toString();
-  }
-
-  String _formatCurrency(double amount) {
-    if (amount >= 10000000)
-      return '${(amount / 10000000).toStringAsFixed(1)}Cr';
-    if (amount >= 100000) return '${(amount / 100000).toStringAsFixed(1)}L';
-    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}k';
-    return amount.toStringAsFixed(0);
-  }
-
   Widget _buildRecommendationCard(HeatProvider heatProvider) {
     if (_selectedLocation == null) return const SizedBox.shrink();
 
@@ -483,6 +706,48 @@ class _SimulationScreenState extends State<SimulationScreen> {
   }
 }
 
+class _NeoIconBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool isActive;
+
+  const _NeoIconBtn({
+    required this.icon,
+    required this.onTap,
+    this.isActive = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        height: 48,
+        width: 48,
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primary : AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isActive ? AppColors.primary : AppColors.glassBorder,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(
+          icon,
+          color: isActive ? Colors.white : AppColors.textPrimary,
+          size: 24,
+        ),
+      ),
+    );
+  }
+}
+
 class _InterventionButton extends StatelessWidget {
   final InterventionType type;
   final bool isSelected;
@@ -577,6 +842,7 @@ class _SummaryItem extends StatelessWidget {
             color: AppColors.textPrimary,
             fontSize: 17,
             fontWeight: FontWeight.bold,
+            fontSize: 14,
           ),
         ),
         const SizedBox(height: 2),
