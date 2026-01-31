@@ -1,0 +1,32 @@
+import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+
+class GradientBackground extends StatelessWidget {
+  final Widget child;
+  final List<Color>? colors;
+
+  const GradientBackground({
+    super.key,
+    required this.child,
+    this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors ??
+              [
+                AppColors.deepBlue,
+                AppColors.darkBackground,
+                AppColors.darkBackground,
+              ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: child,
+    );
+  }
+}
