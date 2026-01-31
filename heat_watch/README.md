@@ -1,59 +1,102 @@
-# 🌡️ Heat Watch - Urban Heat Intelligence Platform
+# Heat Watch - Urban Heat Intelligence Platform 🌿🌡️
 
-A professional Flutter application that maps urban heat islands, identifies vulnerable populations through a **Heat Inequality Index (HII)**, and simulates intervention impacts.
+A professional Flutter application designed to map urban heat islands, identify vulnerable populations, and simulate green interventions for a cooler, more equitable city.
 
-![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
-![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
+![App Splash Screen](assets/images/splash.png)
 
-## ✨ Features
-
-### 🏠 Dashboard
-- Real-time city heat overview with critical alerts
-- Key statistics with animated cards
-- Quick action navigation
+## 🚀 Key Features
 
 ### 🗺️ Interactive Heat Map
-- Google Maps integration with heat overlay
-- Day/Night temperature toggle
-- Ward-level temperature markers
+- **Real-time Visualization**: View temperature gradients across city wards.
+- **Toggle Modes**: Switch between Day and Night heat distribution.
+- **Smart Markers**: Tap any zone to see detailed temperature metrics.
+- **Dynamic Legend**: Color-coded scale from Cool (<35°C) to Extreme (>43°C).
 
 ### 📊 Heat Inequality Index (HII)
-- **Unique vulnerability scoring** combining temperature, demographics, and infrastructure
-- Risk level classification (Low/Moderate/High/Extreme)
-- Ranked ward visualization
+- **Vulnerability Analysis**: Ranks wards based on a composite risk score.
+- **Comprehensive Metrics**: Analyzes factors like:
+  - Population Density
+  - Green Cover %
+  - Vulnerable Age Groups
+  - Hospital Access
+- **Visual Analytics**: Beautiful bar charts and risk distribution graphs.
 
-### 🌳 Intervention Simulator
-- Interactive simulation of cooling interventions (Trees, Cool Roofs, Green Spaces)
-- Real-time impact calculation and ROI analysis
-- Before/after temperature comparison
+### 🌳 Simulation & Intervention
+- **Impact Prediction**: Simulate planting trees or installing cool roofs.
+- **Before/After Comparisons**: Instant feedback on temperature reduction.
+- **Cost Estimation**: Projected budget requirements for interventions.
+- **Interactive Placement**: Drag-and-drop interface for planning green zones.
 
-## 🚀 Getting Started
-
-```bash
-cd heat_watch
-flutter pub get
-flutter run
-```
-
-**Note**: App works perfectly with mock data. See [API_GUIDE.md](API_GUIDE.md) for optional API setup.
-
-## 🧮 Heat Inequality Index Algorithm
-
-```
-HII = Temperature(35%) + PopDensity(20%) + Vulnerable(20%) + 
-      (100-GreenCover)(15%) + (100-HospitalAccess)(10%)
-
-Risk: Extreme ≥75, High ≥50, Moderate ≥25, Low <25
-```
-
-## 📊 Mock Data
-
-Includes realistic data for 12 Delhi NCR wards with demographics, temperature, and infrastructure metrics.
-
-## 🛠️ Technologies
-
-Flutter • Provider • Google Maps • FL Chart • Google Fonts • Flutter Animate
+### 📱 Modern & Beautiful UI/UX
+- **Nature-Themed Design**: Soothing greens and earth tones.
+- **Glassmorphism**: Modern, translucent UI elements.
+- **Smooth Animations**: Professional transitions and interactive feedback.
+- **Dark Mode**: Eye-friendly dark forest theme.
 
 ---
 
-**Built with ❤️ for smarter, cooler cities**
+## 🛠️ Tech Stack
+
+- **Framework**: Flutter (Dart)
+- **Maps**: `flutter_map` with OpenStreetMap
+- **State Management**: `provider`
+- **Charts**: `fl_chart`
+- **Animations**: `flutter_animate`
+- **Icons**: `flutter_launcher_icons` (Custom Adaptive Icons)
+- **backend**: (Mocked for Demo) Satellite & Weather Data Service
+
+---
+
+## 📸 Screenshots
+
+| Splash Screen | Heat Map | Inequality Analysis | Simulation |
+|:---:|:---:|:---:|:---:|
+| <img src="assets/images/splash.png" width="200" /> | <img src="assets/images/logo.png" width="200" /> | <img src="assets/images/logo.png" width="200" /> | <img src="assets/images/logo.png" width="200" /> |
+
+---
+
+## 🏁 Getting Started
+
+### Prerequisites
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) (3.0+)
+- Android Studio / VS Code
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/heat-watch.git
+   cd heat_watch
+   ```
+
+2. **Install dependencies**
+   ```bash
+   flutter pub get
+   ```
+
+3. **Run the app**
+   ```bash
+   flutter run
+   ```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+**Heat Watch** — Cooling our cities, one pixel at a time. 🌍✨
