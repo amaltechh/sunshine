@@ -7,24 +7,22 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      
+
       // Color Scheme
-      colorScheme: ColorScheme.dark(
+      colorScheme: const ColorScheme.dark(
         primary: AppColors.cyan,
         secondary: AppColors.orange,
-        background: AppColors.darkBackground,
         surface: AppColors.cardBackground,
         error: AppColors.danger,
         onPrimary: AppColors.textPrimary,
         onSecondary: AppColors.textPrimary,
-        onBackground: AppColors.textPrimary,
         onSurface: AppColors.textPrimary,
         onError: AppColors.textPrimary,
       ),
-      
+
       // Scaffold
       scaffoldBackgroundColor: AppColors.darkBackground,
-      
+
       // AppBar
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -37,20 +35,20 @@ class AppTheme {
         ),
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
-      
+
       // Card
       cardTheme: CardTheme(
         color: AppColors.cardBackground,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
+          side: const BorderSide(
             color: AppColors.glassBorder,
             width: 1,
           ),
         ),
       ),
-      
+
       // Text Theme
       textTheme: GoogleFonts.interTextTheme(
         const TextTheme(
@@ -93,25 +91,25 @@ class AppTheme {
           ),
         ),
       ),
-      
+
       // Input Decoration
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surfaceColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.glassBorder),
+          borderSide: const BorderSide(color: AppColors.glassBorder),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.glassBorder),
+          borderSide: const BorderSide(color: AppColors.glassBorder),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.cyan, width: 2),
+          borderSide: const BorderSide(color: AppColors.cyan, width: 2),
         ),
       ),
-      
+
       // Elevated Button
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -128,7 +126,7 @@ class AppTheme {
           ),
         ),
       ),
-      
+
       // Bottom Navigation Bar
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.cardBackground,
@@ -136,7 +134,8 @@ class AppTheme {
         unselectedItemColor: AppColors.textTertiary,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
-        selectedLabelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+        selectedLabelStyle:
+            GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
         unselectedLabelStyle: GoogleFonts.inter(fontSize: 12),
       ),
     );

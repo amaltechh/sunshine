@@ -129,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         value: provider.avgCityTemperature.toStringAsFixed(1),
                         unit: '°C',
                         icon: Icons.thermostat,
-                        gradientColors: [AppColors.orange, AppColors.red],
+                        gradientColors: const [AppColors.orange, AppColors.red],
                         subtitle: 'CITY AVG',
                       ),
                       StatCard(
@@ -138,7 +138,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             hottestWard?.temperature.toStringAsFixed(1) ?? '--',
                         unit: '°C',
                         icon: Icons.local_fire_department,
-                        gradientColors: [AppColors.red, AppColors.darkRed],
+                        gradientColors: const [
+                          AppColors.red,
+                          AppColors.darkRed
+                        ],
                         subtitle: hottestWard?.wardName ?? 'N/A',
                       ),
                       StatCard(
@@ -151,7 +154,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             .toString(),
                         unit: 'wards',
                         icon: Icons.warning_amber,
-                        gradientColors: [AppColors.orange, AppColors.warning],
+                        gradientColors: const [
+                          AppColors.orange,
+                          AppColors.warning
+                        ],
                       ),
                       StatCard(
                         title: 'Most Vulnerable',
@@ -160,7 +166,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 '--',
                         unit: 'HII',
                         icon: Icons.people,
-                        gradientColors: [AppColors.cyan, AppColors.coolBlue],
+                        gradientColors: const [
+                          AppColors.cyan,
+                          AppColors.coolBlue
+                        ],
                         subtitle: mostVulnerable?.wardName ?? 'N/A',
                       ),
                     ],

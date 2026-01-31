@@ -38,6 +38,10 @@ class AppColors {
   static const Color orange = warmOrange;
   static const Color red = sunsetOrange;
   static const Color darkRed = deepRed;
+  static const Color deepBlue =
+      Color(0xFF1B4332); // Deep forest green as replacement
+
+  static const Color secondary = warmOrange; // Added secondary alias
 
   // Glassmorphism
   static const Color glassBackground = Color(0x1AFFFFFF);

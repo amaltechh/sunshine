@@ -65,7 +65,7 @@ class _MainNavigatorState extends State<MainNavigator> {
         children: _screens,
       ),
       bottomNavigationBar: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           border: Border(
             top: BorderSide(
               color: AppColors.glassBorder,

@@ -16,8 +16,8 @@ dependencies:
   flutter_animate: ^4.2.0
 
   # Maps & Location
-  flutter_map: ^6.1.0
-  latlong2: ^0.9.0
+
+  google_maps_flutter: ^2.5.0
 
   # Charts & Visualization
   fl_chart: ^0.65.0
@@ -30,6 +30,7 @@ dependencies:
   shared_preferences: ^2.2.0
 
   # Utilities
+  geolocator: ^10.1.0
   intl: ^0.18.1
 
 dev_dependencies:

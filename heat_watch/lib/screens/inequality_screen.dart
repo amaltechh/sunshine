@@ -237,10 +237,10 @@ class _RiskDistributionBar extends StatelessWidget {
                   flex: extreme,
                   child: Container(
                     height: 8,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.darkRed,
-                      borderRadius: const BorderRadius.horizontal(
-                          left: Radius.circular(4)),
+                      borderRadius:
+                          BorderRadius.horizontal(left: Radius.circular(4)),
                     ),
                   ),
                 ),
@@ -265,10 +265,10 @@ class _RiskDistributionBar extends StatelessWidget {
                   flex: low,
                   child: Container(
                     height: 8,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.cyan,
-                      borderRadius: const BorderRadius.horizontal(
-                          right: Radius.circular(4)),
+                      borderRadius:
+                          BorderRadius.horizontal(right: Radius.circular(4)),
                     ),
                   ),
                 ),

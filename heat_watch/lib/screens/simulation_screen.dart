@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../providers/heat_provider.dart';
 import '../providers/simulation_provider.dart';
 import '../models/simulation_result.dart';
+import '../models/heat_inequality_index.dart'; // Added import
 import '../theme/app_colors.dart';
 import '../constants/app_constants.dart';
 
@@ -17,7 +17,7 @@ class SimulationScreen extends StatefulWidget {
 }
 
 class _SimulationScreenState extends State<SimulationScreen> {
-  final MapController _mapController = MapController();
+  GoogleMapController? _mapController;
   LatLng? _selectedLocation;
   InterventionType _selectedIntervention = InterventionType.treePlanting;
 
@@ -41,6 +41,54 @@ class _SimulationScreenState extends State<SimulationScreen> {
       ),
       body: Consumer2<HeatProvider, SimulationProvider>(
         builder: (context, heatProvider, simProvider, child) {
+          Set<Marker> markers = {};
+
+          // Simulation Markers
+          for (var sim in simProvider.simulations) {
+            // Create a marker with a hue color corresponding to intervention type
+            double hue;
+            switch (sim.interventionType) {
+              case InterventionType.treePlanting:
+                hue = BitmapDescriptor.hueGreen;
+                break;
+              case InterventionType.coolRoof:
+                hue = BitmapDescriptor.hueBlue;
+                break;
+              case InterventionType.greenSpace:
+                hue = BitmapDescriptor.hueYellow;
+                break;
+            }
+
+            markers.add(
+              Marker(
+                markerId: MarkerId(sim.id),
+                position: LatLng(sim.latitude, sim.longitude),
+                icon: BitmapDescriptor.defaultMarkerWithHue(hue),
+                infoWindow: InfoWindow(
+                  title: sim.interventionName,
+                  snippet:
+                      '-${sim.temperatureReduction.toStringAsFixed(1)}°C Temp Drop',
+                  onTap: () {
+                    simProvider.removeSimulation(sim.id);
+                  },
+                ),
+              ),
+            );
+          }
+
+          // Selected Location Marker
+          if (_selectedLocation != null) {
+            markers.add(
+              Marker(
+                markerId: const MarkerId('selected'),
+                position: _selectedLocation!,
+                icon: BitmapDescriptor.defaultMarkerWithHue(
+                    BitmapDescriptor.hueRed),
+                infoWindow: const InfoWindow(title: 'Selected Location'),
+              ),
+            );
+          }
+
           return Column(
             children: [
               // Map
@@ -48,77 +96,26 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 flex: 2,
                 child: Stack(
                   children: [
-                    FlutterMap(
-                      mapController: _mapController,
-                      options: MapOptions(
-                        initialCenter: LatLng(
+                    GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: LatLng(
                           AppConstants.defaultLat,
                           AppConstants.defaultLng,
                         ),
-                        initialZoom: 12,
-                        onTap: (_, position) {
-                          setState(() {
-                            _selectedLocation = position;
-                          });
-                        },
+                        zoom: 12, // Google maps zoom
                       ),
-                      children: [
-                        TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          userAgentPackageName: 'com.heatwatch.heat_watch',
-                          maxNativeZoom: 19,
-                          maxZoom: 19,
-                          keepBuffer: 4, // Better tile caching
-                          tileProvider: NetworkTileProvider(), // Faster loading
-                        ),
-
-                        // Intervention markers
-                        if (simProvider.simulations.isNotEmpty)
-                          MarkerLayer(
-                            markers: simProvider.simulations.map((sim) {
-                              return Marker(
-                                point: LatLng(sim.latitude, sim.longitude),
-                                width: 50,
-                                height: 50,
-                                child: Icon(
-                                  _getInterventionIcon(sim.interventionType),
-                                  color: AppColors.success,
-                                  size: 36,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black.withOpacity(0.3),
-                                      blurRadius: 4,
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-
-                        // Selected location marker
-                        if (_selectedLocation != null)
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: _selectedLocation!,
-                                width: 40,
-                                height: 40,
-                                child: Icon(
-                                  Icons.add_location,
-                                  color: AppColors.primary,
-                                  size: 40,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black.withOpacity(0.5),
-                                      blurRadius: 6,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
+                      onMapCreated: (controller) {
+                        _mapController = controller;
+                      },
+                      onTap: (position) {
+                        setState(() {
+                          _selectedLocation = position;
+                        });
+                      },
+                      markers: markers,
+                      myLocationButtonEnabled: false,
+                      zoomControlsEnabled: false,
+                      mapToolbarEnabled: false,
                     ),
 
                     // Instructions
@@ -218,6 +215,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         ),
                       ],
                     ),
+
+                    // SMART RECOMMENDATION SECTION
+                    if (_selectedLocation != null) ...[
+                      const SizedBox(height: 16),
+                      _buildRecommendationCard(heatProvider),
+                    ],
+
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
@@ -247,7 +251,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
               // Results
               if (simProvider.simulations.isNotEmpty)
                 Expanded(
-                  flex: 3, // Increased from 1 to 3 for more scroll space
+                  flex: 3,
                   child: Container(
                     color: AppColors.darkBackground,
                     child: Column(
@@ -376,6 +380,106 @@ class _SimulationScreenState extends State<SimulationScreen> {
     if (amount >= 100000) return '${(amount / 100000).toStringAsFixed(1)}L';
     if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}k';
     return amount.toStringAsFixed(0);
+  }
+
+  Widget _buildRecommendationCard(HeatProvider heatProvider) {
+    if (_selectedLocation == null) return const SizedBox.shrink();
+
+    final hii = heatProvider.getClosestHII(
+      _selectedLocation!.latitude,
+      _selectedLocation!.longitude,
+    );
+
+    if (hii == null) return const SizedBox.shrink();
+
+    // Recommendation Logic
+    String recommendation = '';
+    IconData recIcon = Icons.lightbulb;
+    String reason = '';
+
+    if (hii.populationDensity > 20000) {
+      recommendation = 'Cool Roofs';
+      recIcon = Icons.roofing;
+      reason =
+          'High population density (${(hii.populationDensity / 1000).toStringAsFixed(1)}k/km²) requires vertical cooling solutions.';
+    } else if (hii.greenCover < 15) {
+      recommendation = 'Urban Forestry';
+      recIcon = Icons.park;
+      reason =
+          'Critical lack of green cover (${hii.greenCover.toStringAsFixed(1)}%) contributes to heat island effect.';
+    } else {
+      recommendation = 'Green Spaces';
+      recIcon = Icons.grass;
+      reason =
+          'General cooling needed. Parks would benefit this moderate density area.';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.analytics, color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Site Analysis',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Ward: ${hii.wardName}',
+            style: const TextStyle(
+                color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            'Density: ${(hii.populationDensity / 1000).toStringAsFixed(1)}k/km² • Green Cover: ${hii.greenCover.toStringAsFixed(1)}%',
+            style:
+                const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 16, color: AppColors.glassBorder),
+          Row(
+            children: [
+              Icon(recIcon, color: AppColors.secondary, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Recommended: $recommendation',
+                      style: const TextStyle(
+                        color: AppColors.secondary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      reason,
+                      style: const TextStyle(
+                          color: AppColors.textTertiary, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 
